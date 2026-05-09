@@ -1,16 +1,68 @@
-# RetailOpsPractice
+# SQL Server RetailOps Practice
 
-A SQL Server practice database for learning DDL, DML, joins, aggregation, subqueries, views, indexes, stored procedures, and analytical SQL. 
+A beginner-to-advanced SQL Server practice project using a fictional retail/e-commerce operations database.
 
-## How to Use 
+The goal of this project is to learn SQL Server from the ground up, including:
 
-1. Open SQL Server Management Studio.
-2. Connect to the local SQL Server instance.
-3. Run scripts in numerical order.
-4. Start with files in `03\_practice\_questions`.
-5. Check answers in `04\_solutions`.
+- Database creation
+- Schemas
+- Tables
+- Constraints
+- Indexes
+- Seed data
+- SELECT queries
+- Joins
+- Aggregation
+- CTEs
+- Window functions
+- Business-style analytics queries
 
-## Database Name
+## Domain
 
-`RetailOpsPractice`
+This project uses a fictional retail operations database.
 
+Main entities:
+
+- Customers
+- Products
+- Categories
+- Suppliers
+- Orders
+- Order items
+
+## Folder Structure
+
+```text
+sql-server-retailops-practice/
+│
+├── README.md
+├── .gitignore
+│
+├── 00_setup/
+│   ├── 00_create_database.sql
+│   └── 01_use_database_check.sql
+│
+├── 01_schema/
+│   ├── 01_create_tables.sql
+│   ├── 02_create_constraints.sql
+│   └── 03_create_indexes.sql
+│
+├── 02_seed_data/
+│   ├── 01_insert_customers.sql
+│   ├── 02_insert_products.sql
+│   ├── 03_insert_orders.sql
+│   └── 04_insert_order_items.sql
+│
+├── 03_practice_questions/
+│   ├── beginner.sql
+│   ├── intermediate.sql
+│   └── advanced.sql
+│
+├── 04_solutions/
+│   ├── beginner_solutions.sql
+│   ├── intermediate_solutions.sql
+│   └── advanced_solutions.sql
+│
+└── 99_reset/
+    ├── drop_database.sql
+    └── reset_database.sql
