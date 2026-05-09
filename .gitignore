@@ -1,0 +1,14 @@
+# SQL Server database files
+*.mdf
+*.ldf
+*.ndf
+*.bak
+*.trn
+
+# Environment/secrets
+.env
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.vscode/
