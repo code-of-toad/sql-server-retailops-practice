@@ -20,6 +20,24 @@
 USE RetailOpsPractice;
 GO
 
+SELECT *
+FROM product.Category;
+GO
+SELECT *
+FROM product.Supplier;
+GO
+SELECT *
+FROM product.Product;
+GO
+SELECT *
+FROM sales.Customer;
+GO
+SELECT *
+FROM sales.[Order];
+GO
+SELECT *
+FROM sales.OrderItem;
+GO
 
 /* ============================================================
    1. Basic joins
@@ -28,24 +46,66 @@ GO
 -- Q1.
 -- Show each order with the customer's first name, last name, email,
 -- order date, order status, and sales channel.
-
+SELECT
+    o.OrderId,
+    c.FirstName,
+    c.LastName,
+    c.Email,
+    o.OrderDate,
+    o.OrderStatus,
+    o.SalesChannel
+FROM sales.Customer AS c
+JOIN sales.[Order] AS o
+    ON c.CustomerID = o.CustomerID;
+GO
 
 -- Q2.
 -- Show each order item with:
 -- OrderID, ProductName, SKU, Quantity, UnitPrice, DiscountAmount.
-
+SELECT
+    oi.OrderID,
+    p.ProductName,
+    p.SKU,
+    oi.Quantity,
+    oi.UnitPrice,
+    oi.DiscountAmount
+FROM sales.OrderItem AS oi
+JOIN product.Product AS p
+    ON oi.ProductID = p.ProductID;
+GO
 
 -- Q3.
 -- Show each product with its category name.
-
+SELECT
+    c.CategoryName AS ProductCategory,
+    p.*
+FROM product.Product AS p
+JOIN product.Category AS c
+    ON p.CategoryID = c.CategoryID;
+GO
 
 -- Q4.
 -- Show each product with its supplier name.
-
+SELECT
+    s.SupplierName AS ProductSupplier,
+    p.*
+FROM product.Product AS p
+JOIN product.Supplier AS s
+    ON p.SupplierID = s.SupplierID;
+GO
 
 -- Q5.
 -- Show each product with both its category name and supplier name.
-
+SELECT
+    c.CategoryName AS ProductCategory,
+    s.SupplierName AS ProductSupplier,
+    p.*
+FROM product.Product AS p
+JOIN product.Supplier AS s
+    ON p.SupplierID = s.SupplierID
+JOIN product.Category AS c
+    ON p.CategoryID = c.CategoryID;
+GO
 
 /* ============================================================
    2. Order totals
@@ -54,24 +114,97 @@ GO
 -- Q6.
 -- Show each order item with a calculated LineTotal:
 -- Quantity * UnitPrice - DiscountAmount.
-
+SELECT
+    *,
+    ((Quantity * UnitPrice) - DiscountAmount) AS LineTotal
+FROM sales.OrderItem;
+GO
 
 -- Q7.
 -- Show total revenue per order.
 -- Include OrderID, OrderDate, OrderStatus, and OrderTotal.
-
+SELECT
+    o.OrderID,
+    o.OrderDate,
+    o.OrderStatus,
+    SUM((oi.Quantity * oi.UnitPrice) - oi.DiscountAmount) AS OrderTotal
+FROM sales.[Order] AS o
+JOIN sales.OrderItem AS oi
+    ON o.OrderID = oi.OrderID
+GROUP BY
+    o.OrderID,
+    o.OrderDate,
+    o.OrderStatus
+ORDER BY o.OrderID;
+GO
 
 -- Q8.
 -- Show total revenue per order, but include customer first and last name.
-
+SELECT
+    c.FirstName,
+    c.LastName,
+    o.OrderID,
+    o.OrderDate,
+    o.OrderStatus,
+    SUM((oi.Quantity * oi.UnitPrice) - oi.DiscountAmount) AS OrderTotal
+FROM sales.[Order] AS o
+JOIN sales.OrderItem AS oi
+    ON o.OrderID = oi.OrderID
+JOIN sales.Customer AS c
+    ON o.CustomerID = c.CustomerID
+GROUP BY
+    c.FirstName,
+    c.LastName,
+    o.OrderID,
+    o.OrderDate,
+    o.OrderStatus;
+GO
 
 -- Q9.
 -- Show only delivered orders and their order totals.
-
+SELECT
+    c.FirstName,
+    c.LastName,
+    o.OrderID,
+    o.OrderDate,
+    o.OrderStatus,
+    SUM((oi.Quantity * oi.UnitPrice) - oi.DiscountAmount) AS OrderTotal
+FROM sales.[Order] AS o
+JOIN sales.OrderItem AS oi
+    ON o.OrderID = oi.OrderID
+JOIN sales.Customer AS c
+    ON o.CustomerID = c.CustomerID
+WHERE o.OrderStatus = 'Delivered'
+GROUP BY
+    c.FirstName,
+    c.LastName,
+    o.OrderID,
+    o.OrderDate,
+    o.OrderStatus;
+GO
 
 -- Q10.
 -- Show orders where the order total is greater than 200.
-
+SELECT
+    c.FirstName,
+    c.LastName,
+    o.OrderID,
+    o.OrderDate,
+    o.OrderStatus,
+    SUM((oi.Quantity * oi.UnitPrice) - oi.DiscountAmount) AS OrderTotal
+FROM sales.[Order] AS o
+JOIN sales.OrderItem AS oi
+    ON o.OrderID = oi.OrderID
+JOIN sales.Customer AS c
+    ON o.CustomerID = c.CustomerID
+GROUP BY
+    c.FirstName,
+    c.LastName,
+    o.OrderID,
+    o.OrderDate,
+    o.OrderStatus
+HAVING SUM((oi.Quantity * oi.UnitPrice) - oi.DiscountAmount) > 200;
+GO
 
 /* ============================================================
    3. Customer-level analysis
@@ -79,24 +212,89 @@ GO
 
 -- Q11.
 -- Show total number of orders per customer.
-
+SELECT
+    c.CustomerID,
+    c.FirstName,
+    c.LastName,
+    COUNT(o.OrderID) AS OrderCount
+FROM sales.Customer AS c
+LEFT JOIN sales.[Order] AS o
+    ON c.CustomerID = o.CustomerID
+GROUP BY
+    c.CustomerID,
+    c.FirstName,
+    c.LastName;
+GO
 
 -- Q12.
 -- Show total revenue per customer.
 -- Exclude cancelled orders.
-
+SELECT
+    c.CustomerID,
+    c.FirstName,
+    c.LastName,
+    COALESCE(SUM((oi.UnitPrice * oi.Quantity) - oi.DiscountAmount), 0.00) AS TotalRevenue
+FROM sales.Customer AS c
+LEFT JOIN sales.[Order] AS o
+    ON c.CustomerID = o.CustomerID
+    AND o.OrderStatus <> 'Cancelled'
+LEFT JOIN sales.OrderItem AS oi
+    ON o.OrderID = oi.OrderID
+GROUP BY
+    c.CustomerID,
+    c.FirstName,
+    c.LastName;
+GO
 
 -- Q13.
 -- Show customers who have placed more than one order.
-
+SELECT
+    c.CustomerID,
+    c.FirstName,
+    c.LastName,
+    COUNT(o.OrderID) AS OrderCount
+FROM sales.Customer AS c
+JOIN sales.[Order] AS o
+    ON c.CustomerID = o.CustomerID
+GROUP BY
+    c.CustomerID,
+    c.FirstName,
+    c.LastName
+HAVING COUNT(o.OrderID) > 1;
+GO
 
 -- Q14.
 -- Show customers who have never placed an order.
-
+SELECT
+    c.CustomerID,
+    c.FirstName,
+    c.LastName,
+    COUNT(o.OrderID) AS OrderCount
+FROM sales.Customer AS c
+LEFT JOIN sales.[Order] AS o
+    ON c.CustomerID = o.CustomerID
+GROUP BY
+    c.CustomerID,
+    c.FirstName,
+    c.LastName
+HAVING COUNT(o.OrderID) = 0;
+GO
 
 -- Q15.
 -- Show each customer's most recent order date.
-
+SELECT
+    c.CustomerID,
+    c.FirstName,
+    c.LastName,
+    MAX(o.OrderDate) AS LastOrderDate
+FROM sales.Customer AS c
+LEFT JOIN sales.[Order] AS o
+    ON c.CustomerID = o.CustomerID
+GROUP BY
+    c.CustomerID,
+    c.FirstName,
+    c.LastName;
+GO
 
 /* ============================================================
    4. Product-level analysis
