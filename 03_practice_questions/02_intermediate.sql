@@ -302,23 +302,80 @@ GO
 
 -- Q16.
 -- Show total quantity sold per product.
-
+SELECT
+    p.ProductID,
+    p.ProductName,
+    COALESCE(SUM(oi.Quantity), 0) AS TotalQuantitySold
+FROM product.Product AS p
+LEFT JOIN sales.OrderItem AS oi
+    ON p.ProductID = oi.ProductID
+GROUP BY
+    p.ProductID,
+    p.ProductName;
+GO
 
 -- Q17.
 -- Show total revenue per product.
-
+SELECT 
+    p.ProductID,
+    p.ProductName,
+    COALESCE(SUM(oi.Quantity), 0) AS TotalQuantitySold,
+    COALESCE(SUM(oi.UnitPrice * oi.Quantity - oi.DiscountAmount), 0.00) AS TotalRevenue
+FROM product.Product AS p
+LEFT JOIN sales.OrderItem AS oi
+    ON p.ProductID = oi.ProductID
+GROUP BY
+    p.ProductID,
+    p.ProductName;
+GO
 
 -- Q18.
 -- Show the top 5 products by total revenue.
-
+SELECT TOP 5
+    p.ProductID,
+    p.ProductName,
+    COALESCE(SUM(oi.Quantity), 0) AS TotalQuantitySold,
+    COALESCE(SUM(oi.UnitPrice * oi.Quantity - oi.DiscountAmount), 0.00) AS TotalRevenue
+FROM product.Product AS p
+LEFT JOIN sales.OrderItem AS oi
+    ON p.ProductID = oi.ProductID
+GROUP BY
+    p.ProductID,
+    p.ProductName
+ORDER BY TotalRevenue DESC;
+GO
 
 -- Q19.
 -- Show total quantity sold per category.
-
+SELECT
+    c.CategoryID,
+    c.CategoryName,
+    COALESCE(SUM(oi.Quantity), 0) AS TotalQuantitySold
+FROM product.Category AS c
+LEFT JOIN product.Product AS p
+    ON c.CategoryID = p.CategoryID
+LEFT JOIN sales.OrderItem AS oi
+    ON p.ProductID = oi.ProductID
+GROUP BY
+    c.CategoryID,
+    c.CategoryName;
+GO
 
 -- Q20.
 -- Show total revenue per supplier.
-
+SELECT
+    s.SupplierID,
+    s.SupplierName,
+    COALESCE(SUM((oi.Quantity * oi.UnitPrice) - oi.DiscountAmount), 0.00) AS TotalRevenue
+FROM product.Supplier AS s
+LEFT JOIN product.Product AS p
+    ON s.SupplierID = p.SupplierID
+LEFT JOIN sales.OrderItem AS oi
+    ON p.ProductID = oi.ProductID
+GROUP BY
+    s.SupplierID,
+    s.SupplierName;
+GO
 
 /* ============================================================
    5. GROUP BY and HAVING
@@ -326,20 +383,63 @@ GO
 
 -- Q21.
 -- Show loyalty tiers with more than 2 customers.
-
+SELECT
+    c.LoyaltyTier,
+    COUNT(*) AS CustomerCount
+FROM sales.Customer AS c
+GROUP BY
+    c.LoyaltyTier
+HAVING COUNT(*) > 2;
+GO
 
 -- Q22.
 -- Show sales channels with more than 3 orders.
-
+SELECT
+    o.SalesChannel,
+    COUNT(*) AS OrderCount
+FROM sales.[Order] AS o
+GROUP BY
+    o.SalesChannel
+HAVING COUNT(*) > 3;
+GO
 
 -- Q23.
 -- Show products with total quantity sold greater than 2.
-
+SELECT
+    p.ProductID,
+    p.ProductName,
+    SUM(oi.Quantity) AS TotalQuantitySold
+FROM product.Product AS p
+JOIN sales.OrderItem AS oi
+    ON p.ProductID = oi.ProductID
+GROUP BY
+    p.ProductID,
+    p.ProductName
+HAVING SUM(oi.Quantity) > 2;
+GO
 
 -- Q24.
 -- Show customers whose total spending is greater than 300.
 -- Exclude cancelled orders.
-
+SELECT
+    c.CustomerID,
+    c.FirstName,
+    c.LastName,
+    c.Email,
+    SUM((oi.UnitPrice * oi.Quantity) - oi.DiscountAmount) AS TotalSpending
+FROM sales.Customer AS c
+JOIN sales.[Order] AS o
+    ON c.CustomerID = o.CustomerID
+JOIN sales.OrderItem AS oi
+    ON o.OrderID = oi.OrderID
+WHERE o.OrderStatus <> 'Cancelled'
+GROUP BY
+    c.CustomerID,
+    c.FirstName,
+    c.LastName,
+    c.Email
+HAVING SUM((oi.UnitPrice * oi.Quantity) - oi.DiscountAmount) > 300;
+GO
 
 /* ============================================================
    6. CASE expressions
@@ -401,16 +501,48 @@ GO
 -- Q33.
 -- Show all customers and their orders.
 -- Include customers even if they have no orders.
-
+SELECT
+    c.CustomerID,
+    c.FirstName,
+    c.LastName,
+    c.Email,
+    o.OrderID,
+    o.OrderDate,
+    o.OrderStatus,
+    o.SalesChannel,
+    o.CustomerNote
+FROM sales.Customer AS c
+LEFT JOIN sales.[Order] AS o
+    ON c.CustomerID = o.CustomerID;
 
 -- Q34.
 -- Show all products and their order items.
 -- Include products even if they have never been ordered.
-
+SELECT
+    p.ProductID,
+    p.ProductName,
+    p.SKU,
+    p.IsActive,
+    oi.OrderItemID,
+    oi.OrderID,
+    oi.Quantity,
+    oi.UnitPrice AS UnitPriceAtSale
+FROM product.Product AS p
+LEFT JOIN sales.OrderItem AS oi
+    ON p.ProductID = oi.ProductID;
 
 -- Q35.
 -- Show products that have never been ordered.
-
+SELECT
+    p.ProductID,
+    p.ProductName,
+    p.SKU,
+    p.IsActive,
+    'Never Ordered' AS OrderStatusFlag
+FROM product.Product AS p
+LEFT JOIN sales.OrderItem AS oi
+    ON p.ProductID = oi.ProductID
+WHERE oi.OrderItemID IS NULL;
 
 /* ============================================================
    9. Business-style questions
