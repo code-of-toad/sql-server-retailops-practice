@@ -541,26 +541,84 @@ GO
 
 -- Q28.
 -- Show all orders placed in June 2025.
-
+SELECT
+    o.OrderID,
+    o.CustomerID,
+    o.OrderDate
+FROM sales.[Order] AS o
+WHERE o.OrderDate >= '2025-06-01'
+  AND o.OrderDate <  '2025-07-01';
+GO
 
 -- Q29.
 -- Show total revenue by month.
 -- Display OrderYear, OrderMonth, and MonthlyRevenue.
 -- Exclude cancelled orders.
-
+SELECT
+    YEAR(o.OrderDate) AS OrderYear,
+    MONTH(o.OrderDate) AS OrderMonth,
+    SUM((oi.UnitPrice * oi.Quantity) - oi.DiscountAmount) AS MonthlyRevenue
+FROM sales.[Order] AS o
+JOIN sales.OrderItem AS oi
+    ON o.OrderID = oi.OrderID
+WHERE o.OrderStatus <> 'Cancelled'
+GROUP BY
+    YEAR(o.OrderDate),
+    MONTH(o.OrderDate)
+ORDER BY
+    OrderYear,
+    OrderMonth;
+GO
 
 -- Q30.
 -- Show number of orders by month.
-
+SELECT
+    YEAR(o.OrderDate) AS OrderYear,
+    MONTH(o.OrderDate) AS OrderMonth,
+    COUNT(*) AS OrderCount
+FROM sales.[Order] AS o
+GROUP BY
+    YEAR(o.OrderDate),
+    MONTH(o.OrderDate)
+ORDER BY
+    OrderYear,
+    OrderMonth;
+GO
 
 -- Q31.
 -- Show customers who signed up before June 1, 2025.
-
+SELECT
+    c.CustomerID,
+    c.FirstName,
+    c.LastName,
+    c.Email,
+    c.SignupDate
+FROM sales.Customer AS c
+WHERE c.SignupDate < '2025-06-01'
+ORDER BY c.SignupDate;
 
 -- Q32.
 -- Show how many days passed between each customer's SignupDate
 -- and their first OrderDate.
-
+WITH FirstOrderDatePerCust AS (
+    SELECT
+        o.CustomerID,
+        MIN(o.OrderDate) AS FirstOrderDate
+    FROM sales.[Order] AS o
+    GROUP BY
+        o.CustomerID
+)
+SELECT
+    c.CustomerID,
+    c.SignupDate,
+    fod.FirstOrderDate,
+    DATEDIFF(DAY, c.SignupDate, fod.FirstOrderDate) AS DaysToFirstOrder
+FROM sales.Customer AS c
+LEFT JOIN FirstOrderDatePerCust AS fod
+    ON c.CustomerID = fod.CustomerID
+ORDER BY
+    c.CustomerID;
+GO
 
 /* ============================================================
    8. LEFT JOIN practice
@@ -582,6 +640,7 @@ SELECT
 FROM sales.Customer AS c
 LEFT JOIN sales.[Order] AS o
     ON c.CustomerID = o.CustomerID;
+GO
 
 -- Q34.
 -- Show all products and their order items.
@@ -598,6 +657,7 @@ SELECT
 FROM product.Product AS p
 LEFT JOIN sales.OrderItem AS oi
     ON p.ProductID = oi.ProductID;
+GO
 
 -- Q35.
 -- Show products that have never been ordered.
@@ -611,6 +671,7 @@ FROM product.Product AS p
 LEFT JOIN sales.OrderItem AS oi
     ON p.ProductID = oi.ProductID
 WHERE oi.OrderItemID IS NULL;
+GO
 
 /* ============================================================
    9. Business-style questions
@@ -619,21 +680,72 @@ WHERE oi.OrderItemID IS NULL;
 -- Q36.
 -- Which sales channel generated the most revenue?
 -- Exclude cancelled orders.
-
+SELECT
+    o.SalesChannel,
+    SUM((oi.UnitPrice * oi.Quantity) - oi.DiscountAmount) AS TotalRevenue
+FROM sales.[Order] AS o
+JOIN sales.OrderItem AS oi
+    ON o.OrderID = oi.OrderID
+WHERE o.OrderStatus <> 'Cancelled'
+GROUP BY
+    o.SalesChannel
+ORDER BY TotalRevenue DESC;
+GO
 
 -- Q37.
 -- Which loyalty tier generated the most revenue?
 -- Exclude cancelled orders.
-
+SELECT
+    c.LoyaltyTier,
+    SUM((oi.UnitPrice * oi.Quantity) - oi.DiscountAmount) AS TotalRevenue
+FROM sales.[Order] AS o
+JOIN sales.OrderItem AS oi
+    ON o.OrderID = oi.OrderID
+JOIN sales.Customer AS c
+    ON c.CustomerID = o.CustomerID
+WHERE o.OrderStatus <> 'Cancelled'
+GROUP BY
+    c.LoyaltyTier
+ORDER BY
+    TotalRevenue DESC;
+GO
 
 -- Q38.
 -- Which category generated the most revenue?
-
+SELECT
+    pc.CategoryID,
+    pc.CategoryName,
+    SUM((oi.UnitPrice * oi.Quantity) - oi.DiscountAmount) AS TotalRevenue
+FROM product.Product AS p
+JOIN sales.OrderItem AS oi
+    ON p.ProductID = oi.ProductID
+JOIN product.Category AS pc
+    ON pc.CategoryID = p.CategoryID
+GROUP BY
+    pc.CategoryID,
+    pc.CategoryName
+ORDER BY
+    TotalRevenue DESC;
+GO
 
 -- Q39.
 -- What is the average order value?
 -- Exclude cancelled orders.
-
+WITH OrderTotals AS (
+    SELECT
+        o.OrderID,
+        SUM((oi.UnitPrice * oi.Quantity) - oi.DiscountAmount) AS OrderTotal
+    FROM sales.[Order] AS o
+    JOIN sales.OrderItem AS oi
+        ON o.OrderID = oi.OrderID
+    WHERE o.OrderStatus <> 'Cancelled'
+    GROUP BY
+        o.OrderID
+)
+SELECT
+    CAST(ROUND(AVG(ot.OrderTotal), 2) AS DECIMAL(10, 2)) AS AverageOrderValue
+FROM OrderTotals AS ot;
+GO
 
 -- Q40.
 -- For each customer, show:
@@ -641,3 +753,28 @@ WHERE oi.OrderItemID IS NULL;
 -- TotalOrders,
 -- TotalSpent,
 -- AverageOrderValue.
+WITH OrderTotals AS (
+    SELECT
+        o.OrderID,
+        o.CustomerID,
+        SUM((oi.UnitPrice * oi.Quantity) - oi.DiscountAmount) AS OrderTotal
+    FROM sales.[Order] AS o
+    JOIN sales.OrderItem AS oi
+        ON o.OrderID = oi.OrderID
+    GROUP BY
+        o.OrderID,
+        o.CustomerID
+)
+SELECT
+    c.CustomerID,
+    CONCAT(c.FirstName, ' ', c.LastName) AS CustomerName,
+    COUNT(ot.OrderID) AS TotalOrders,
+    COALESCE(SUM(ot.OrderTotal), 0) AS TotalSpent,
+    CAST(ROUND(AVG(ot.OrderTotal), 2) AS DECIMAL(10, 2)) AS AverageOrderValue
+FROM sales.Customer AS c
+LEFT JOIN OrderTotals AS ot
+    ON c.CustomerID = ot.CustomerID
+GROUP BY
+    c.CustomerID,
+    CONCAT(c.FirstName, ' ', c.LastName);
+GO
