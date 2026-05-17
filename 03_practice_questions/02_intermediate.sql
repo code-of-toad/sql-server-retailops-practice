@@ -450,7 +450,17 @@ GO
 -- UnitPrice < 50        -> 'Budget'
 -- UnitPrice 50 to 149.99 -> 'Standard'
 -- UnitPrice >= 150       -> 'Premium'
-
+SELECT
+    p.ProductID,
+    p.ProductName,
+    p.UnitPrice,
+    CASE
+        WHEN p.UnitPrice < 50 THEN 'Budget'
+        WHEN p.UnitPrice < 150 THEN 'Standard'
+        ELSE 'Premium'
+    END AS PriceBand
+FROM product.Product AS p;
+GO
 
 -- Q26.
 -- Show orders with an OrderOutcome column:
@@ -459,13 +469,71 @@ GO
 -- Cancelled -> 'Problem'
 -- Pending   -> 'In Progress'
 -- Shipped   -> 'In Progress'
-
+SELECT
+    o.OrderID,
+    o.CustomerID,
+    o.OrderDate,
+    o.OrderStatus,
+    CASE
+        WHEN o.OrderStatus = 'Delivered' THEN 'Successful'
+        WHEN o.OrderStatus IN ('Returned', 'Cancelled') THEN 'Problem'
+        WHEN o.OrderStatus IN ('Pending', 'Shipped') THEN 'In Progress'
+    END AS OrderOutcome
+FROM sales.[Order] AS o
+ORDER BY
+    CASE
+        WHEN o.OrderStatus IN ('Delivered') THEN 1
+        WHEN o.OrderStatus IN ('Returned', 'Cancelled') THEN 2
+        WHEN o.OrderStatus IN ('Pending', 'Shipped') THEN 3
+    END;
+GO
+-- or......
+WITH OrderOutcomes AS (
+    SELECT
+        o.OrderID,
+        o.CustomerID,
+        o.OrderDate,
+        o.OrderStatus,
+        CASE
+            WHEN o.OrderStatus = 'Delivered' THEN 'Successful'
+            WHEN o.OrderStatus IN ('Returned', 'Cancelled') THEN 'Problem'
+            WHEN o.OrderStatus IN ('Pending', 'Shipped') THEN 'In Progress'
+            ELSE 'Unknown'
+        END AS OrderOutcome
+    FROM sales.[Order] AS o
+)
+SELECT
+    oo.OrderID,
+    oo.CustomerID,
+    oo.OrderDate,
+    oo.OrderStatus,
+    oo.OrderOutcome
+FROM OrderOutcomes AS oo
+ORDER BY
+    CASE
+        WHEN oo.OrderOutcome = 'Successful' THEN 1
+        WHEN oo.OrderOutcome = 'Problem' THEN 2
+        WHEN oo.OrderOutcome = 'In Progress' THEN 3
+        ELSE 4
+    END;
+GO
 
 -- Q27.
 -- Show customers with a MarketingStatus column:
 -- MarketingOptIn = 1 -> 'Subscribed'
 -- MarketingOptIn = 0 -> 'Not Subscribed'
-
+SELECT
+    c.CustomerID,
+    c.FirstName,
+    c.LastName,
+    c.Email,
+    CASE
+        WHEN c.MarketingOptin = 1 THEN 'Subscribed'
+        WHEN c.MarketingOptin = 0 THEN 'Not Subscribed'
+        ELSE 'Unknown'
+    END AS MarketingStatus
+FROM sales.Customer as c;
+GO
 
 /* ============================================================
    7. Date practice
